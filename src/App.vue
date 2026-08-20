@@ -4,6 +4,7 @@ import ProductCard from './components/ProductCard.vue'
 import CartPanel from './components/CartPanel.vue'
 import ReceiptModal from './components/ReceiptModal.vue'
 import OrdersModal from './components/OrdersModal.vue'
+import SettingsModal from './components/SettingsModal.vue'
 import { formatPrice } from './utils/format'
 import { saveStruk } from './utils/db'
 
@@ -25,6 +26,8 @@ const customer = ref('')
 const editingOrderNo = ref('')
 const editingStrukId = ref(null)
 const cartVisible = ref(false)
+const showSettings = ref(false)
+const paperWidth = ref(localStorage.getItem('surabi-paper-width') || '58')
 let cartObserver = null
 
 const types = computed(() => {
@@ -164,9 +167,9 @@ function checkout() {
 }
 
 function onPrinted(payload) {
-  saveStruk({ ...payload, status: 'done', id: editingStrukId.value || undefined }).catch((e) =>
-    console.error('Gagal menyimpan struk', e)
-  )
+  const struk = { ...payload, status: 'done' }
+  if (editingStrukId.value) struk.id = editingStrukId.value
+  saveStruk(struk).catch((e) => console.error('Gagal menyimpan struk', e))
   resetOrderState()
   showReceipt.value = false
 }
@@ -194,6 +197,11 @@ function printStruk(s) {
 function cancelEdit() {
   editingOrderNo.value = ''
   editingStrukId.value = null
+}
+
+function setPaperWidth(v) {
+  paperWidth.value = v
+  localStorage.setItem('surabi-paper-width', v)
 }
 
 function scrollToCart() {
@@ -252,6 +260,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex items-center gap-2">
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-cocoa-800/60 text-cocoa-100 transition hover:bg-cocoa-800"
+            title="Pengaturan"
+            @click="showSettings = true"
+          >
+            <i class="fa-solid fa-gear"></i>
+          </button>
           <button
             class="flex h-10 items-center gap-2 rounded-full bg-cocoa-800/60 px-4 text-sm font-semibold text-cocoa-100 transition hover:bg-cocoa-800"
             title="Riwayat struk"
@@ -380,8 +395,16 @@ onBeforeUnmount(() => {
       :note="note"
       :customer="customer"
       :order-no="editingOrderNo"
+      :paper-width="paperWidth"
       @close="showReceipt = false"
       @printed="onPrinted"
+    />
+
+    <SettingsModal
+      v-if="showSettings"
+      :paper-width="paperWidth"
+      @close="showSettings = false"
+      @update:paper-width="setPaperWidth"
     />
 
     <button

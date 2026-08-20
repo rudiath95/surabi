@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { formatPrice, formatTime } from '../utils/format'
+import ReceiptContent from './ReceiptContent.vue'
 
 const props = defineProps({
   items: { type: Array, required: true },
@@ -9,6 +10,7 @@ const props = defineProps({
   note: { type: String, required: true },
   customer: { type: String, required: true },
   orderNo: { type: String, default: '' },
+  paperWidth: { type: String, default: '58' },
 })
 
 const emit = defineEmits(['close', 'printed'])
@@ -30,9 +32,97 @@ const orderNo = computed(() => props.orderNo || 'ORD-' + Date.now().toString().s
 const dateLine = computed(() =>
   now.value.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
 )
+const timeStr = computed(() => formatTime(now.value))
+
+function escapeHtml(s = '') {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function buildReceiptHtml() {
+  const itemsHtml = props.items
+    .map(
+      (i) => `
+      <div class="item">
+        <div class="line">
+          <span class="name">${escapeHtml(i.name)}</span>
+          <span class="amount">${i.qty} x ${formatPrice(i.price)}</span>
+        </div>
+        <div class="line">
+          <span class="name"></span>
+          <span class="amount bold">${formatPrice(i.qty * i.price)}</span>
+        </div>
+      </div>`
+    )
+    .join('')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Struk Pembayaran</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Courier New', 'Lucida Console', monospace;
+    font-size:12px;
+    line-height:1.3;
+    width:${props.paperWidth}mm;
+    margin:0 auto;
+    padding:2mm 1.5mm;
+    background:#fff;
+    color:#000;
+  }
+  .store-name { text-align:center; font-size:16px; font-weight:bold; letter-spacing:1px; border-bottom:1px dashed #000; padding-bottom:3px; margin-bottom:2px; }
+  .store-sub { text-align:center; font-size:10px; color:#333; }
+  .divider { border-top:1px dashed #000; margin:5px 0; }
+  .row { display:flex; justify-content:space-between; }
+  .meta { margin-bottom:3px; }
+  .item { margin-bottom:4px; }
+  .line { display:flex; justify-content:space-between; }
+  .line .name { flex:1; padding-right:4px; word-break:break-word; }
+  .line .amount { white-space:nowrap; }
+  .bold { font-weight:bold; }
+  .total { display:flex; justify-content:space-between; font-weight:bold; font-size:15px; border-top:1px dashed #000; padding-top:4px; margin-top:4px; }
+  .footer { text-align:center; margin-top:6px; border-top:1px dashed #000; padding-top:4px; }
+  @media print {
+    @page { margin: 0; }
+    body { margin:0; padding:0; }
+  }
+</style>
+</head>
+<body>
+  <div class="store-name">${STORE.name}</div>
+  <div class="store-sub">${STORE.address}</div>
+  <div class="store-sub">${STORE.phone}</div>
+  <div class="divider"></div>
+  <div class="row meta"><span>No : ${orderNo.value}</span><span>${dateLine.value} ${timeStr.value}</span></div>
+  ${props.customer ? `<div class="row meta"><span>Kepada</span><span>${escapeHtml(props.customer)}</span></div>` : ''}
+  <div class="divider"></div>
+  ${itemsHtml}
+  <div class="divider"></div>
+  <div class="row meta"><span>Bayar</span><span>${paymentLabels[props.paymentMethod] || props.paymentMethod}</span></div>
+  <div class="row meta"><span>Catatan</span><span>${escapeHtml(props.note) || '-'}</span></div>
+  <div class="divider"></div>
+  <div class="total"><span>TOTAL</span><span>${formatPrice(props.subtotal)}</span></div>
+  <div class="footer">Terima kasih!<br/>Selamat menikmati.</div>
+  <script>window.onload=function(){window.print();setTimeout(function(){window.close();},600)};<\/script>
+</body>
+</html>`
+}
 
 function print() {
-  window.print()
+  const w = window.open('', '_blank', 'width=400,height=600,toolbar=no,menubar=no,scrollbars=yes')
+  if (!w) {
+    alert('Popup diblokir! Izinkan popup untuk situs ini agar struk bisa dicetak.')
+    return
+  }
+  w.document.write(buildReceiptHtml())
+  w.document.close()
+  w.focus()
   emit('printed', {
     orderNo: orderNo.value,
     date: now.value.getTime(),
@@ -65,60 +155,17 @@ function print() {
         </header>
 
         <div class="overflow-y-auto bg-white p-4 dark:bg-cocoa-900">
-          <div class="print-receipt mx-auto bg-white font-mono text-[12px] leading-snug text-black">
-            <div class="text-center">
-              <p class="text-lg font-bold tracking-widest">{{ STORE.name }}</p>
-              <p>{{ STORE.address }}</p>
-              <p>{{ STORE.phone }}</p>
-            </div>
-
-            <div class="my-1 border-t border-dashed border-black"></div>
-
-            <div class="flex justify-between">
-              <span>No : {{ orderNo }}</span>
-              <span>{{ dateLine }} {{ formatTime(now) }}</span>
-            </div>
-
-            <div v-if="customer" class="flex justify-between">
-              <span>Kepada</span>
-              <span>{{ customer }}</span>
-            </div>
-
-            <div class="my-1 border-t border-dashed border-black"></div>
-
-            <div v-for="item in items" :key="item.id" class="mb-1">
-              <p>{{ item.name }}</p>
-              <div class="flex justify-between">
-                <span>{{ item.qty }} x {{ formatPrice(item.price) }}</span>
-                <span>{{ formatPrice(item.qty * item.price) }}</span>
-              </div>
-            </div>
-
-            <div class="my-1 border-t border-dashed border-black"></div>
-
-            <div class="flex justify-between">
-              <span>Bayar</span>
-              <span>{{ paymentLabels[paymentMethod] || paymentMethod }}</span>
-            </div>
-
-            <div class="mt-1 flex justify-between">
-              <span>Catatan</span>
-              <span>{{ note || '-' }}</span>
-            </div>
-
-            <div class="my-1 border-t border-dashed border-black"></div>
-
-            <div class="flex justify-between text-sm font-bold">
-              <span>TOTAL</span>
-              <span>{{ formatPrice(subtotal) }}</span>
-            </div>
-
-            <div class="my-1 border-t border-dashed border-black"></div>
-
-            <div class="text-center">
-              <p>Terima kasih!</p>
-              <p>Selamat menikmati.</p>
-            </div>
+          <div class="mx-auto bg-white" :style="{ width: paperWidth + 'mm' }">
+            <ReceiptContent
+              :order-no="orderNo"
+              :date-line="dateLine"
+              :time-str="timeStr"
+              :items="items"
+              :subtotal="subtotal"
+              :payment-method="paymentMethod"
+              :note="note"
+              :customer="customer"
+            />
           </div>
         </div>
 

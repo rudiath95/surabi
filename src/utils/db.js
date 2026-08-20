@@ -1,5 +1,5 @@
 const DB_NAME = 'surabi-pos'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE = 'struks'
 
 let dbPromise = null
@@ -16,7 +16,11 @@ function openDB() {
           store.createIndex('date', 'date')
         }
       }
-      req.onsuccess = () => resolve(req.result)
+      req.onsuccess = () => {
+        const db = req.result
+        db.onversionchange = () => db.close()
+        resolve(db)
+      }
       req.onerror = () => reject(req.error)
     })
   }
