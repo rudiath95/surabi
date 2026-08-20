@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import ProductCard from './components/ProductCard.vue'
 import CartPanel from './components/CartPanel.vue'
 import ReceiptModal from './components/ReceiptModal.vue'
@@ -14,6 +14,7 @@ const products = ref([])
 const loading = ref(true)
 const error = ref('')
 const activeType = ref('Semua')
+const search = ref('')
 const cart = ref([])
 const showReceipt = ref(false)
 const showHistory = ref(false)
@@ -23,17 +24,22 @@ const note = ref('')
 const customer = ref('')
 const editingOrderNo = ref('')
 const editingStrukId = ref(null)
+const cartVisible = ref(false)
+let cartObserver = null
 
 const types = computed(() => {
   const set = new Set(products.value.map((p) => p.type).filter(Boolean))
   return ['Semua', ...set]
 })
 
-const filteredProducts = computed(() =>
-  activeType.value === 'Semua'
-    ? products.value
-    : products.value.filter((p) => p.type === activeType.value)
-)
+const filteredProducts = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return products.value.filter((p) => {
+    if (activeType.value !== 'Semua' && p.type !== activeType.value) return false
+    if (q && !(p.name.toLowerCase().includes(q) || p.type.toLowerCase().includes(q))) return false
+    return true
+  })
+})
 
 const cartCount = computed(() => cart.value.reduce((s, i) => s + i.qty, 0))
 const subtotal = computed(() => cart.value.reduce((s, i) => s + i.qty * i.price, 0))
@@ -190,6 +196,22 @@ function cancelEdit() {
   editingStrukId.value = null
 }
 
+function scrollToCart() {
+  document.getElementById('cart-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function setupCartObserver() {
+  const el = document.getElementById('cart-area')
+  if (!el) return
+  cartObserver = new IntersectionObserver(
+    (entries) => {
+      cartVisible.value = entries[0].isIntersecting
+    },
+    { threshold: 0.15 }
+  )
+  cartObserver.observe(el)
+}
+
 function toggleTheme() {
   isDark.value = !isDark.value
   document.documentElement.classList.toggle('dark', isDark.value)
@@ -201,6 +223,11 @@ onMounted(() => {
   isDark.value = saved === 'dark'
   document.documentElement.classList.toggle('dark', isDark.value)
   loadMenu()
+  nextTick(setupCartObserver)
+})
+
+onBeforeUnmount(() => {
+  cartObserver?.disconnect()
 })
 </script>
 
@@ -272,6 +299,25 @@ onMounted(() => {
         </div>
 
         <template v-else>
+          <div class="relative mb-4">
+            <i
+              class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-cocoa-400"
+            ></i>
+            <input
+              v-model="search"
+              type="search"
+              placeholder="Cari produk..."
+              class="w-full rounded-xl border border-cocoa-300 bg-white py-2.5 pl-9 pr-9 text-sm text-cocoa-900 placeholder:text-cocoa-400 focus:border-cocoa-600 focus:outline-none focus:ring-2 focus:ring-cocoa-500/30 dark:border-cocoa-700 dark:bg-cocoa-900 dark:text-cocoa-100 dark:placeholder:text-cocoa-500"
+            />
+            <button
+              v-if="search"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-cocoa-400 hover:text-cocoa-600"
+              @click="search = ''"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
           <div class="mb-4 flex flex-wrap gap-2">
             <button
               v-for="t in types"
@@ -303,7 +349,7 @@ onMounted(() => {
         </template>
       </section>
 
-      <div class="w-full lg:w-[360px] lg:shrink-0">
+      <div id="cart-area" class="w-full scroll-mt-24 lg:w-[360px] lg:shrink-0">
         <div class="lg:sticky lg:top-[76px] lg:h-[calc(100vh-100px)]">
           <CartPanel
             :items="cart"
@@ -337,6 +383,20 @@ onMounted(() => {
       @close="showReceipt = false"
       @printed="onPrinted"
     />
+
+    <button
+      v-if="cartCount && !cartVisible && !showReceipt"
+      class="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-cocoa-600 text-xl text-white shadow-lg transition hover:bg-cocoa-500 active:scale-95"
+      title="Ke keranjang"
+      @click="scrollToCart"
+    >
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span
+        class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold"
+      >
+        {{ cartCount }}
+      </span>
+    </button>
 
     <OrdersModal
       v-if="showHistory"
