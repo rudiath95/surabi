@@ -83,6 +83,10 @@ async function load() {
   }
 }
 
+function printPdf() {
+  window.print()
+}
+
 onMounted(load)
 </script>
 
@@ -147,7 +151,7 @@ onMounted(load)
           <button
             :disabled="loading || !filtered.length"
             class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cocoa-600 py-2.5 text-sm font-bold text-white shadow hover:bg-cocoa-500 disabled:cursor-not-allowed disabled:opacity-40"
-            @click="window.print()"
+            @click="printPdf"
           >
             <i class="fa-solid fa-file-pdf"></i>
             Export PDF

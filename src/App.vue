@@ -220,16 +220,14 @@ function setupCartObserver() {
   cartObserver.observe(el)
 }
 
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('surabi-theme', isDark.value ? 'dark' : 'light')
+function setTheme(dark) {
+  isDark.value = dark
+  document.documentElement.classList.toggle('dark', dark)
+  localStorage.setItem('surabi-theme', dark ? 'dark' : 'light')
 }
 
 onMounted(() => {
-  const saved = localStorage.getItem('surabi-theme')
-  isDark.value = saved === 'dark'
-  document.documentElement.classList.toggle('dark', isDark.value)
+  setTheme(localStorage.getItem('surabi-theme') === 'dark')
   loadMenu()
   nextTick(setupCartObserver)
 })
@@ -261,13 +259,6 @@ onBeforeUnmount(() => {
 
         <div class="flex items-center gap-2">
           <button
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-cocoa-800/60 text-cocoa-100 transition hover:bg-cocoa-800"
-            title="Pengaturan"
-            @click="showSettings = true"
-          >
-            <i class="fa-solid fa-gear"></i>
-          </button>
-          <button
             class="flex h-10 items-center gap-2 rounded-full bg-cocoa-800/60 px-4 text-sm font-semibold text-cocoa-100 transition hover:bg-cocoa-800"
             title="Riwayat struk"
             @click="showHistory = true"
@@ -283,10 +274,10 @@ onBeforeUnmount(() => {
           </div>
           <button
             class="flex h-10 w-10 items-center justify-center rounded-full bg-cocoa-800/60 text-cocoa-100 transition hover:bg-cocoa-800"
-            :title="isDark ? 'Mode terang' : 'Mode gelap'"
-            @click="toggleTheme"
+            title="Pengaturan"
+            @click="showSettings = true"
           >
-            <i :class="isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
+            <i class="fa-solid fa-gear"></i>
           </button>
         </div>
       </div>
@@ -403,8 +394,10 @@ onBeforeUnmount(() => {
     <SettingsModal
       v-if="showSettings"
       :paper-width="paperWidth"
+      :dark="isDark"
       @close="showSettings = false"
       @update:paper-width="setPaperWidth"
+      @update:dark="setTheme"
     />
 
     <button

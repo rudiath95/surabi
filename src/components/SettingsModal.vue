@@ -1,13 +1,19 @@
 <script setup>
 defineProps({
   paperWidth: { type: String, required: true },
+  dark: { type: Boolean, required: true },
 })
 
-const emit = defineEmits(['close', 'update:paperWidth'])
+const emit = defineEmits(['close', 'update:paperWidth', 'update:dark'])
 
 const options = [
   { value: '58', label: '58 mm', desc: 'Printer thermal kecil (standar)' },
   { value: '80', label: '80 mm', desc: 'Printer thermal lebar' },
+]
+
+const themes = [
+  { value: false, label: 'Terang', desc: 'Latar terang krem', icon: 'fa-sun' },
+  { value: true, label: 'Gelap', desc: 'Latar cokelat gelap', icon: 'fa-moon' },
 ]
 </script>
 
@@ -31,6 +37,30 @@ const options = [
         </header>
 
         <div class="px-4 pb-4">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-cocoa-500 dark:text-cocoa-400">
+            Tema Website
+          </p>
+          <div class="mb-4 grid grid-cols-2 gap-2">
+            <button
+              v-for="t in themes"
+              :key="t.label"
+              class="flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition"
+              :class="
+                dark === t.value
+                  ? 'border-cocoa-600 bg-cocoa-600 text-white shadow'
+                  : 'border-cocoa-300 bg-white text-cocoa-700 hover:bg-cocoa-100 dark:border-cocoa-700 dark:bg-cocoa-900 dark:text-cocoa-200 dark:hover:bg-cocoa-800'
+              "
+              @click="emit('update:dark', t.value)"
+            >
+              <i :class="['fa-solid', t.icon]"></i>
+              <span>
+                <span class="block text-sm font-bold">{{ t.label }}</span>
+                <span class="block text-xs opacity-70">{{ t.desc }}</span>
+              </span>
+              <i v-if="dark === t.value" class="fa-solid fa-circle-check ml-auto"></i>
+            </button>
+          </div>
+
           <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-cocoa-500 dark:text-cocoa-400">
             Lebar Kertas Printer Thermal
           </p>
