@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getAllStruks } from '../utils/db'
-import { formatPrice } from '../utils/format'
+import { formatPrice, businessDate } from '../utils/format'
 import SalesReportContent from './SalesReportContent.vue'
 
 const emit = defineEmits(['close'])
@@ -25,7 +25,7 @@ const year = ref(now.getFullYear())
 
 const years = computed(() => {
   const set = new Set([now.getFullYear()])
-  for (const s of struks.value) set.add(new Date(s.date).getFullYear())
+  for (const s of struks.value) set.add(businessDate(s.date).getFullYear())
   return [...set].sort((a, b) => b - a)
 })
 
@@ -33,7 +33,7 @@ const doneStruks = computed(() => struks.value.filter((s) => s.status !== 'activ
 
 const filtered = computed(() =>
   doneStruks.value.filter((s) => {
-    const d = new Date(s.date)
+    const d = businessDate(s.date)
     return d.getMonth() === month.value && d.getFullYear() === year.value
   })
 )

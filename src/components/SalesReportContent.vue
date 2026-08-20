@@ -12,6 +12,7 @@ defineProps({
       <p class="text-2xl font-extrabold tracking-widest">SURABI</p>
       <p class="text-lg font-bold">Laporan Penjualan</p>
       <p>Periode: {{ data.periodLabel }}</p>
+      <p class="text-xs">Periode operasional 15.00 - 04.00, pesanan setelah tengah malam dihitung sebagai hari sebelumnya</p>
     </div>
 
     <div class="my-3 border-t-2 border-cocoa-950"></div>
